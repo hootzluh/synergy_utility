@@ -30,128 +30,107 @@
 #         # Update prompt if active wallet
 #         if self.active_wallet:
 #             self.prompt = f"synergy ({self.active_wallet.name})> "
-"""
-cli_app.py
-
-CLI entry point for Synergy Network Utility
-- Real synergy PQC address generation (Dilithium2)
-- chain derivation for ethereum/solana/tron
-- synergy naming system
-
-Ensure you pip install:
-  pqcrypto
-  eth_account
-  solana
-  tronpy
-as desired to get full functionality.
-"""
+# cli_utility/synergy_cli_app.py
 
 import argparse
 import sys
 
-from synergy_uma.pq_keys import (
-    generate_synergy_seed,
-    save_synergy_info,
-    load_synergy_info,
-    derive_subkey_for_chain
-)
-from synergy_uma.sns_api import (
-    register_name,
-    lookup_name
-)
-
 def main():
-    parser = argparse.ArgumentParser(description="Synergy Network CLI Utility")
-    subparsers = parser.add_subparsers(dest="command", help="Commands")
+    parser = argparse.ArgumentParser(
+        description="Synergy Network CLI Utility",
+        add_help=False  # We'll handle help ourselves for the welcome screen
+    )
+    subparsers = parser.add_subparsers(dest="command")
 
-    # Example wallet subcommands
-    wallet_parser = subparsers.add_parser("wallet", help="Wallet commands")
+    # Example subcommand: wallet
+    wallet_parser = subparsers.add_parser("wallet", help="Wallet operations")
     wallet_sub = wallet_parser.add_subparsers(dest="wallet_command")
+    w_create = wallet_sub.add_parser("create", help="Create a new wallet")
+    w_create.set_defaults(func=wallet_create)
 
-    w_create = wallet_sub.add_parser("create", help="Create a new wallet (example stub)")
-    w_create.add_argument("--name", required=True)
-    w_create.set_defaults(func=cmd_wallet_create)
+    # Example subcommand: token
+    token_parser = subparsers.add_parser("token", help="Token operations")
+    token_sub = token_parser.add_subparsers(dest="token_command")
+    t_create = token_sub.add_parser("create", help="Create a new token")
+    t_create.set_defaults(func=token_create)
 
-    # Example UMA commands
+    # Example subcommand: uma
     uma_parser = subparsers.add_parser("uma", help="Universal Meta Address commands")
     uma_sub = uma_parser.add_subparsers(dest="uma_command")
-
     gen_cmd = uma_sub.add_parser("generate", help="Generate synergy PQC address")
-    gen_cmd.add_argument("--out", default="synergy_seed.json", help="Output file path")
-    gen_cmd.add_argument("--password", default="", help="Password to encrypt private key")
-    gen_cmd.set_defaults(func=cmd_uma_generate)
+    gen_cmd.set_defaults(func=uma_generate)
 
     derive_cmd = uma_sub.add_parser("derive", help="Derive chain address")
-    derive_cmd.add_argument("--file", default="synergy_seed.json", help="Path to synergy seed file")
-    derive_cmd.add_argument("--password", default="", help="Password if synergy seed is encrypted")
-    derive_cmd.add_argument("--chain", required=True, help="e.g. ethereum, solana, tron")
-    derive_cmd.set_defaults(func=cmd_uma_derive)
+    derive_cmd.set_defaults(func=uma_derive)
 
-    # Synergy naming commands
-    sns_parser = subparsers.add_parser("sns", help="Synergy naming system")
+    # synergy naming
+    sns_parser = subparsers.add_parser("sns", help="Synergy Naming System")
     sns_sub = sns_parser.add_subparsers(dest="sns_command")
-
-    reg_cmd = sns_sub.add_parser("register", help="Register synergy name -> synergy address")
-    reg_cmd.add_argument("--file", default="synergy_seed.json", help="Path to synergy seed file")
-    reg_cmd.add_argument("--password", default="", help="Password if synergy seed is encrypted")
-    reg_cmd.add_argument("--name", required=True, help="myname.syn")
-    reg_cmd.set_defaults(func=cmd_sns_register)
+    reg_cmd = sns_sub.add_parser("register", help="Register synergy name")
+    reg_cmd.set_defaults(func=sns_register)
 
     look_cmd = sns_sub.add_parser("lookup", help="Lookup synergy name")
-    look_cmd.add_argument("synergy_name", help="the name to look up, e.g. bob.syn")
-    look_cmd.set_defaults(func=cmd_sns_lookup)
+    look_cmd.set_defaults(func=sns_lookup)
 
-    args = parser.parse_args()
+    # parse known
+    args, unknown = parser.parse_known_args()
 
     if not args.command:
-        parser.print_help()
+        # The user typed just 'synergy' or no subcommand
+        print_welcome_screen(parser)
         sys.exit(0)
 
+    # If a subcommand was provided
     if hasattr(args, "func"):
         args.func(args)
     else:
         parser.print_help()
 
 
-def cmd_wallet_create(args):
-    print(f"[Wallet] create stub for name={args.name}")
-    # Insert your real wallet code here
+def print_welcome_screen(parser):
+    """
+    Print a fancy ASCII box plus a list of commands.
+    We'll parse parser._subparsers and sub-subparsers to show them.
+    """
+    print(r"""
+ ┌─────────────────────────────────────────────────────┐
+ │                                                     │
+ │   Synergy Network Utility - Command Line Interface   │
+ │                                                     │
+ │   Type 'synergy <command> --help' for usage details. │
+ │   Type 'synergy --help' to see help.                 │
+ │   Type 'exit' or 'ctrl-c' to quit.                   │
+ │                                                     │
+ └─────────────────────────────────────────────────────┘
+""")
 
-def cmd_uma_generate(args):
-    synergy_data = generate_synergy_seed(args.password)
-    save_synergy_info(args.out, synergy_data)
-    print(f"[UMA] synergy address generated: {synergy_data['synergy_address']}")
-    print(f"Saved synergy data in {args.out}")
+    # Let's show the subcommands from parser
+    print("Available commands:\n")
+    for action in parser._subparsers._group_actions:
+        if action.dest == "command":
+            # these are top-level subcommands
+            for choice, subparser in action.choices.items():
+                print(f"  {choice:<10} {subparser.description or subparser.help}")
+    print("\nExamples:\n  synergy wallet create\n  synergy token create\n  synergy uma generate\n  synergy sns register\n")
 
-def cmd_uma_derive(args):
-    synergy_data = load_synergy_info(args.file, password=args.password)
-    if not synergy_data:
-        print(f"Error: synergy seed file {args.file} not found or password is invalid.")
-        return
-    result = derive_subkey_for_chain(synergy_data, args.chain, args.password)
-    if not result["success"]:
-        print("Error deriving subkey:", result["error"])
-    else:
-        print(f"[UMA] chain={result['chain_name']} -> address={result['chain_address']}")
 
-def cmd_sns_register(args):
-    synergy_data = load_synergy_info(args.file, password=args.password)
-    if not synergy_data:
-        print(f"Error: synergy seed file {args.file} not found or invalid password.")
-        return
-    synergy_addr = synergy_data["synergy_address"]
-    reg_res = register_name(args.name, synergy_addr)
-    if reg_res["success"]:
-        print(f"[SNS] Registered {args.name} -> {synergy_addr}")
-    else:
-        print(f"[SNS] Registration failed: {reg_res['error']}")
+def wallet_create(args):
+    print("[CLI] Creating wallet (stub).")
 
-def cmd_sns_lookup(args):
-    res = lookup_name(args.synergy_name)
-    if res["success"]:
-        print(f"[SNS] {args.synergy_name} -> {res['synergy_addr']}")
-    else:
-        print(f"[SNS] Lookup failed: {res['error']}")
+def token_create(args):
+    print("[CLI] Creating token (stub).")
+
+def uma_generate(args):
+    print("[CLI] UMA generate (stub).")
+
+def uma_derive(args):
+    print("[CLI] UMA derive (stub).")
+
+def sns_register(args):
+    print("[CLI] SNS register (stub).")
+
+def sns_lookup(args):
+    print("[CLI] SNS lookup (stub).")
 
 if __name__ == "__main__":
     main()
