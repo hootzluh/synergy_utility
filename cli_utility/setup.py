@@ -1,25 +1,27 @@
-from setuptools import setup, find_packages
+# cli_utility/setup.py
 
-setup(
-    name="synergy-network-cli",
-    version="1.0.0",
-    description="Command Line Interface for Synergy Network",
-    author="Synergy Network Team",
-    author_email="info@synergy-network.io",
-    packages=find_packages(),
+import setuptools
+
+setuptools.setup(
+    name="synergy-cli-utility",
+    version="0.1.0",
+    description="Synergy Network CLI Utility",
+    author="Your Name",
+    packages=setuptools.find_packages(),
     install_requires=[
-        "argparse>=1.4.0",
-        "cmd2>=2.0.0",
+        # Your dependencies, e.g.:
+        "argparse",
+        "pqcrypto",
+        "pycryptodome",
+        "eth_account",
+        "solana",
+        "tronpy"
+        # etc.
     ],
     entry_points={
-        'console_scripts': [
-            'synergy-cli=cli_app:main',
-        ],
+        "console_scripts": [
+            "synergy=cli_utility.synergy_cli_app:main"
+        ]
     },
-    python_requires='>=3.8',
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
+    python_requires=">=3.7",
 )
