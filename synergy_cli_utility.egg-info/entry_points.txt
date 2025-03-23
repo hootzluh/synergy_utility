@@ -1,2 +1,0 @@
-[console_scripts]
-synergy = cli_utility.cli_app:main
