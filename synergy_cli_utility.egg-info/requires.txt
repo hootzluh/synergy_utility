@@ -1,0 +1,6 @@
+argparse
+pqcrypto
+pycryptodome
+eth_account
+solana
+tronpy
